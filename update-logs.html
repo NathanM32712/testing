@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Update Log</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      font-family: sans-serif;
+      color: #0cf;
+      text-align: center;
+      padding: 40px;
+    }
+    header {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      border-bottom: 2px solid gold;
+      padding-bottom: 10px;
+    }
+    .log {
+      font-size: 18px;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: auto;
+      text-align: left;
+    }
+    .log p {
+      margin: 10px 0;
+    }
+    .log strong {
+      color: gold;
+    }
+    #back-button {
+      background: #222;
+      color: #0cf;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 40px;
+    }
+    #back-button:hover {
+      background: #444;
+    }
+  </style>
+</head>
+<body>
+  <header>📜 Update Log</header>
+  <div class="log">
+    <p><strong>version 3.4</strong> — fixed the coin flipt and dice duel curency matching</p>
+    <p><strong>Version 3.3</strong> — removed Avia Masters because it doesn’t work</p>
+    <p><strong>Version 3.2</strong> — started making the rest of the games blue to match</p>
+    <p><strong>Version 3.2</strong> — fixed the 404 error by removing unfinished games</p>
+    <p><strong>Version 3.1</strong> — remade some games to match the main screen</p>
+    <p><strong>Version 3.0</strong> — remade the layout because you didn’t like green</p>
+    <p><strong>Version 2.1</strong> — added some games and fixed the slots problem</p>
+    <p><strong>Version 2.0</strong> — remade the main page to be green instead of gray</p>
+    <p><strong>Version 1.4</strong> — added most games like Mines 3 and 5, also added cards</p>
+    <p><strong>Version 1.3</strong> — Dice Dual module with bounce animation and duel logic</p>
+    <p><strong>Version 1.2</strong> — Coin Flip module with animated spinner and inflation</p>
+    <p><strong>Version 1.1</strong> — Slots module added with 3× and 2× payout logic</p>
+    <p><strong>Version 1.0</strong> — Initial release with homepage and balance tracking</p>
+  </div>
+  <button onclick="goBack()" id="back-button">⬅️ Back to Launcher</button>
+
+  <script>
+    function goBack() {
+      const launcher = window.open("index.html", "_blank");
+      if (launcher) window.close();
+    }
+  </script>
+</body>
+</html>

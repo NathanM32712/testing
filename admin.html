@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel</title>
+  <style>
+    body {
+      background: #111;
+      color: #0cf;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+    #dev-id-tag {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 20px;
+    }
+    #status {
+      font-size: 24px;
+      margin-bottom: 30px;
+    }
+    section {
+      background: rgba(0,0,0,0.2);
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 6px;
+    }
+    section h2 {
+      font-size: 20px;
+      margin-top: 0;
+      color: #0cf;
+    }
+    input {
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      margin-right: 10px;
+      width: 220px;
+    }
+    button {
+      background: #222;
+      color: #0cf;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #444;
+    }
+    .admin-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .admin-item span {
+      flex: 1;
+    }
+    .admin-item button {
+      padding: 4px 8px;
+      margin-left: 10px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛠 Admin Panel</h1>
+  <div id="dev-id-tag">Loading Device ID...</div>
+  <div id="status">Checking permissions…</div>
+
+  <section id="tools" style="display:none;">
+    <h2>Set slotsbalance for Another Device</h2>
+    <input id="target-id" placeholder="device-xxxxxxx" />
+    <input id="target-amount" placeholder="amount" />
+    <button onclick="setSlotsForTarget()">Set slotsbalance</button>
+
+    <h2 style="margin-top:30px;">Set Your Own slotsBalance</h2>
+    <input id="self-amount" placeholder="amount" />
+    <button onclick="setSlotsForSelf()">Set My Balance</button>
+
+    <h2 style="margin-top:30px;">Current Admins</h2>
+    <div id="admin-list"></div>
+    <input id="new-admin-id" placeholder="device-xxxxxxx" />
+    <button onclick="addAdmin()">Add Admin</button>
+  </section>
+
+  <button onclick="location.href='index.html'">◀ Back to Launcher</button>
+
+  <script>
+    const devId = localStorage.getItem('device-id');
+    const trueAdmins = ['device-p3fmcqly', 'device-dofbybi8', 'device-11tly38k'];
+    const isAdmin = trueAdmins.includes(devId);
+
+    document.getElementById('dev-id-tag').textContent = 'Your Device ID: ' + (devId || 'n/a');
+
+    const statusEl = document.getElementById('status');
+    const tools = document.getElementById('tools');
+
+    if (isAdmin) {
+      statusEl.textContent = 'ACCESS GRANTED';
+      statusEl.style.color = '#0f0';
+      tools.style.display = 'block';
+    } else {
+      statusEl.textContent = 'ACCESS DENIED';
+      statusEl.style.color = '#f00';
+    }
+
+    function getAdminList() {
+      const match = document.cookie.match(/(?:^|; )admin-access-list=([^;]*)/);
+      try {
+        return match ? JSON.parse(decodeURIComponent(match[1])) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveAdminList(list) {
+      document.cookie = `admin-access-list=${encodeURIComponent(JSON.stringify(list))}; path=/; max-age=31536000`;
+    }
+
+    function renderAdminList() {
+      const container = document.getElementById('admin-list');
+      container.innerHTML = '';
+      const list = getAdminList();
+      list.forEach(id => {
+        const div = document.createElement('div');
+        div.className = 'admin-item';
+        const span = document.createElement('span');
+        span.textContent = id;
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.onclick = () => {
+          const updated = list.filter(x => x !== id);
+          saveAdminList(updated);
+          renderAdminList();
+        };
+        div.appendChild(span);
+        div.appendChild(btn);
+        container.appendChild(div);
+      });
+    }
+
+    function addAdmin() {
+      const input = document.getElementById('new-admin-id');
+      const id = input.value.trim();
+      if (id.startsWith('device-')) {
+        const list = getAdminList();
+        if (!list.includes(id)) {
+          list.push(id);
+          saveAdminList(list);
+          renderAdminList();
+          input.value = '';
+        }
+      }
+    }
+
+    function setSlotsForTarget() {
+      const target = document.getElementById('target-id').value.trim();
+      const raw = document.getElementById('target-amount').value.trim();
+      const amt = parseInt(raw, 10);
+      if (target.startsWith('device-') && !isNaN(amt)) {
+        const clamped = amt < 0 ? 0 : amt;
+        const cookieName = `slotsbalance-${target}`;
+        document.cookie = `${cookieName}=${clamped}; path=/; max-age=31536000`;
+        alert(`Set ${cookieName} = ${clamped}`);
+      }
+    }
+
+    function setSlotsForSelf() {
+      const raw = document.getElementById('self-amount').value.trim();
+      const amt = parseInt(raw, 10);
+      if (!isNaN(amt)) {
+        const clamped = amt < 0 ? 0 : amt;
+        localStorage.setItem('slotsBalance', clamped);
+        alert(`Your slotsBalance set to $${clamped}`);
+      }
+    }
+
+    renderAdminList();
+  </script>
+</body>
+</html>
