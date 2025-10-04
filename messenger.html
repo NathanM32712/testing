@@ -4,130 +4,139 @@
   <meta charset="UTF-8" />
   <title>Riskless Messenger</title>
   <style>
-    body { margin: 0; font-family: sans-serif; background: #000; color: #0cf; display: flex; height: 100vh; }
-    #sidebar { width: 240px; background: #111; padding: 20px; box-shadow: 0 0 12px #007BFF; overflow-y: auto; }
-    .friend { background: #222; padding: 10px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; }
-    .friend:hover { background: #333; }
-    #main { flex: 1; display: flex; flex-direction: column; padding: 30px; }
-    h1 { font-size: 32px; margin-bottom: 10px; }
-    #user-tag { font-size: 14px; color: #888; margin-bottom: 20px; }
-    #active-friend-tag { font-size: 16px; margin-bottom: 10px; color: #0cf; }
-    #message-list { flex: 1; background: #111; border-radius: 8px; padding: 20px; overflow-y: auto; box-shadow: 0 0 10px #007BFF; display: flex; flex-direction: column; }
-    .message { background: #222; padding: 8px; margin-bottom: 10px; border-radius: 6px; }
-    .message strong { color: #0cf; }
-    #controls { display: flex; margin-top: 20px; }
-    input, button { padding: 10px; border: none; border-radius: 4px; font-size: 14px; }
-    input { background: #222; color: white; flex: 1; margin-right: 10px; }
-    button { background: #007BFF; color: white; cursor: pointer; }
-    button:hover { background: #0056b3; }
+    body {
+      background: #000;
+      color: #0cf;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    #friend-tag {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+    }
+    input {
+      background: #111;
+      color: #0cf;
+    }
+    button {
+      background: #222;
+      color: #0cf;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #444;
+    }
+    .message-box {
+      margin-top: 20px;
+    }
+    .message {
+      background: #111;
+      padding: 10px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
-  <div id="sidebar">
-    <h2>Friends</h2>
-    <div id="friend-list"></div>
-    <input type="text" id="new-friend" placeholder="Add friend..." />
-    <button onclick="addFriend()">Add</button>
-  </div>
-  <div id="main">
-    <h1>💬 Messenger</h1>
-    <div id="user-tag">Loading user...</div>
-    <div id="active-friend-tag">No friend selected</div>
-    <div id="message-list"></div>
-    <div id="controls">
-      <input type="text" id="message-input" placeholder="Type your message..." />
-      <button onclick="sendMessage()">Send</button>
-    </div>
-  </div>
+  <h1>💬 Riskless Messenger</h1>
+  <div id="friend-tag">Loading account...</div>
+
+  <input type="text" id="friendInput" placeholder="Friend username" />
+  <button onclick="addFriend()">Add Friend</button>
+
+  <br><br>
+  <input type="text" id="messageInput" placeholder="Type a message..." />
+  <button onclick="sendMessage()">Send</button>
+
+  <div class="message-box" id="messageBox"></div>
 
   <script>
-    const account = JSON.parse(localStorage.getItem('accountinfo') || '{}');
-    const username = account.username || 'guest';
-    document.getElementById('user-tag').textContent = 'Logged in as: ' + username;
-
-    let activeFriend = null;
-    const EXPIRY_MS = 432000000; // 5 days
-
-    function setMessageCookie(timestamp, message) {
-      const encoded = btoa(JSON.stringify(message));
-      document.cookie = `msg-${timestamp}=${encoded}; path=/`;
+    const raw = localStorage.getItem('accountinfo');
+    let account = null;
+    try {
+      account = JSON.parse(raw);
+    } catch {}
+    if (!account || !account.username) {
+      location.replace('login.html');
     }
 
-    function getMessageCookies() {
-      return document.cookie.split('; ').filter(c => c.startsWith('msg-'));
+    const username = account.username;
+    document.getElementById('friend-tag').textContent = 'Logged in as: ' + username;
+
+    let currentFriend = null;
+
+    function addFriend() {
+      const friend = document.getElementById('friendInput').value.trim();
+      if (!friend || friend === username) return;
+
+      currentFriend = friend;
+
+      // Save friend list
+      const key = `friends-${username}`;
+      const friends = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!friends.includes(friend)) {
+        friends.push(friend);
+        localStorage.setItem(key, JSON.stringify(friends));
+      }
+
+      // Send notification to friend
+      const notifyKey = `notifications-${friend}`;
+      const notifications = JSON.parse(localStorage.getItem(notifyKey) || '[]');
+      notifications.push({ type: 'friend-request', from: username, time: Date.now() });
+      localStorage.setItem(notifyKey, JSON.stringify(notifications));
+
+      alert(`Friend added and notification sent to ${friend}`);
     }
 
     function sendMessage() {
-      const text = document.getElementById('message-input').value.trim();
-      if (!text || !activeFriend) return;
+      const text = document.getElementById('messageInput').value.trim();
+      if (!text || !currentFriend) return;
 
-      const timestamp = Date.now();
-      const message = { from: username, to: activeFriend, text, time: timestamp };
-      setMessageCookie(timestamp, message);
-      document.getElementById('message-input').value = '';
-      loadMessages();
+      const threadKey = `thread-${username}-${currentFriend}`;
+      const reverseKey = `thread-${currentFriend}-${username}`;
+
+      const message = {
+        from: username,
+        to: currentFriend,
+        text,
+        time: Date.now()
+      };
+
+      // Save to both threads
+      const thread = JSON.parse(localStorage.getItem(threadKey) || '[]');
+      thread.push(message);
+      localStorage.setItem(threadKey, JSON.stringify(thread));
+
+      const reverse = JSON.parse(localStorage.getItem(reverseKey) || '[]');
+      reverse.push(message);
+      localStorage.setItem(reverseKey, JSON.stringify(reverse));
+
+      document.getElementById('messageInput').value = '';
+      renderMessages(thread);
     }
 
-    function loadMessages() {
-      const now = Date.now();
-      const list = document.getElementById('message-list');
-      list.innerHTML = '';
-
-      const messages = getMessageCookies().map(cookie => {
-        const [name, value] = cookie.split('=');
-        try {
-          const msg = JSON.parse(atob(value));
-          if (now - msg.time > EXPIRY_MS) {
-            document.cookie = `${name}=; path=/; max-age=0`; // delete expired
-            return null;
-          }
-          return msg;
-        } catch {
-          return null;
-        }
-      }).filter(msg => msg && msg.to === username && msg.from === activeFriend);
-
-      messages.sort((a, b) => b.time - a.time).forEach(msg => {
+    function renderMessages(thread) {
+      const box = document.getElementById('messageBox');
+      box.innerHTML = '';
+      thread.forEach(msg => {
         const div = document.createElement('div');
         div.className = 'message';
-        div.innerHTML = `<strong>${msg.from}:</strong> ${msg.text}`;
-        list.appendChild(div);
+        div.textContent = `${msg.from}: ${msg.text}`;
+        box.appendChild(div);
       });
     }
-
-    function addFriend() {
-      const input = document.getElementById('new-friend');
-      const name = input.value.trim().toLowerCase();
-      if (!name) return;
-      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      if (!friends.includes(name)) {
-        friends.push(name);
-        localStorage.setItem('friends', JSON.stringify(friends));
-        loadFriends();
-      }
-      input.value = '';
-    }
-
-    function activateFriend(name) {
-      activeFriend = name;
-      document.getElementById('active-friend-tag').textContent = 'Chatting with: ' + name;
-      loadMessages();
-    }
-
-    function loadFriends() {
-      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      const list = document.getElementById('friend-list');
-      list.innerHTML = '';
-      friends.forEach(name => {
-        const div = document.createElement('div');
-        div.className = 'friend';
-        div.textContent = name;
-        div.onclick = () => activateFriend(name);
-        list.appendChild(div);
-      });
-    }
-
-    loadFriends();
   </script>
 </body>
 </html>
