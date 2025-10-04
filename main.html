@@ -75,13 +75,17 @@
   <button class="launcher-button" onclick="window.open('https://discord.gg/YUj7XYcZad', '_blank')">💬 support my friend</button>
   <button class="launcher-button" onclick="window.open('https://discord.gg/CRvWYgbfF8', '_blank')">💬 support me</button>
   <button class="launcher-button" onclick="location.href='messenger.html'">💬 Messenger</button>
+  <button class="launcher-button" onclick="logout()">🚪 Logout</button>
   <div id="games-container"></div>
 
   <script>
     const BALANCE_KEY = 'slotsBalance';
-    const account = JSON.parse(localStorage.getItem('accountinfo') || '{}');
-    const displayname = account.displayname || 'Guest';
+    const account = JSON.parse(localStorage.getItem('accountinfo') || 'null');
+    if (!account || !account.displayname) {
+      window.location.href = 'index.html'; // Redirect to login
+    }
 
+    const displayname = account.displayname;
     document.getElementById('displayname-tag').textContent = 'Logged in as: ' + displayname;
 
     let slotsBalance = localStorage.getItem(BALANCE_KEY);
@@ -111,6 +115,11 @@
 
     document.getElementById('balance').textContent = slotsBalance;
     document.getElementById('slots-cookie').textContent = slotsCookie;
+
+    function logout() {
+      localStorage.removeItem('accountinfo');
+      window.location.href = 'index.html';
+    }
 
     const gameData = {
       "vegas-reels":    { enabled: true,  category: "Slots",       label: "Vegas Reels",       url: "vegas-reels.html" },

@@ -4,107 +4,22 @@
   <meta charset="UTF-8" />
   <title>Riskless Messenger</title>
   <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background: #000;
-      color: #0cf;
-      display: flex;
-      height: 100vh;
-    }
-    #sidebar {
-      width: 240px;
-      background: #111;
-      padding: 20px;
-      box-shadow: 0 0 12px #007BFF;
-      overflow-y: auto;
-    }
-    .friend {
-      background: #222;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .friend:hover {
-      background: #333;
-    }
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 30px;
-    }
-    h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
-    #user-tag {
-      font-size: 14px;
-      color: #888;
-      margin-bottom: 20px;
-    }
-    #active-friend-tag {
-      font-size: 16px;
-      margin-bottom: 10px;
-      color: #0cf;
-    }
-    #message-list {
-      flex: 1;
-      background: #111;
-      border-radius: 8px;
-      padding: 20px;
-      overflow-y: auto;
-      box-shadow: 0 0 10px #007BFF;
-      display: flex;
-      flex-direction: column-reverse;
-    }
-    .message {
-      background: #222;
-      padding: 8px;
-      margin-bottom: 10px;
-      border-radius: 6px;
-    }
-    .message strong {
-      color: #0cf;
-    }
-    #controls {
-      display: flex;
-      margin-top: 20px;
-    }
-    input, button {
-      padding: 10px;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    input {
-      background: #222;
-      color: white;
-      flex: 1;
-      margin-right: 10px;
-    }
-    button {
-      background: #007BFF;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    #modal {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #111;
-      color: #0cf;
-      padding: 20px;
-      border: 2px solid #0cf;
-      border-radius: 10px;
-      z-index: 9999;
-      display: none;
-    }
+    body { margin: 0; font-family: sans-serif; background: #000; color: #0cf; display: flex; height: 100vh; }
+    #sidebar { width: 240px; background: #111; padding: 20px; box-shadow: 0 0 12px #007BFF; overflow-y: auto; }
+    .friend { background: #222; padding: 10px; margin-bottom: 10px; border-radius: 6px; cursor: pointer; }
+    .friend:hover { background: #333; }
+    #main { flex: 1; display: flex; flex-direction: column; padding: 30px; }
+    h1 { font-size: 32px; margin-bottom: 10px; }
+    #user-tag { font-size: 14px; color: #888; margin-bottom: 20px; }
+    #active-friend-tag { font-size: 16px; margin-bottom: 10px; color: #0cf; }
+    #message-list { flex: 1; background: #111; border-radius: 8px; padding: 20px; overflow-y: auto; box-shadow: 0 0 10px #007BFF; display: flex; flex-direction: column; }
+    .message { background: #222; padding: 8px; margin-bottom: 10px; border-radius: 6px; }
+    .message strong { color: #0cf; }
+    #controls { display: flex; margin-top: 20px; }
+    input, button { padding: 10px; border: none; border-radius: 4px; font-size: 14px; }
+    input { background: #222; color: white; flex: 1; margin-right: 10px; }
+    button { background: #007BFF; color: white; cursor: pointer; }
+    button:hover { background: #0056b3; }
   </style>
 </head>
 <body>
@@ -125,36 +40,78 @@
     </div>
   </div>
 
-  <div id="modal">
-    <p id="modal-text"></p>
-    <button onclick="acceptFriend()">Accept</button>
-  </div>
-
   <script>
-    const username = JSON.parse(localStorage.getItem('accountinfo') || '{}').displayname || 'Guest';
+    const account = JSON.parse(localStorage.getItem('accountinfo') || '{}');
+    const username = account.username || 'guest';
     document.getElementById('user-tag').textContent = 'Logged in as: ' + username;
 
     let activeFriend = null;
-    let pendingFriend = null;
+    const EXPIRY_MS = 432000000; // 5 days
 
-    if (!localStorage.getItem('knownPlayers')) {
-      localStorage.setItem('knownPlayers', JSON.stringify(['rex', 'bob', 'alice', 'fartmaster']));
+    function setMessageCookie(timestamp, message) {
+      const encoded = btoa(JSON.stringify(message));
+      document.cookie = `msg-${timestamp}=${encoded}; path=/`;
     }
 
-    function setCookie(name, value) {
-      document.cookie = `${name}=${value}; path=/`;
+    function getMessageCookies() {
+      return document.cookie.split('; ').filter(c => c.startsWith('msg-'));
     }
 
-    function getCookie(name) {
-      const match = document.cookie.split('; ').find(row => row.startsWith(name + '='));
-      return match ? match.split('=')[1] : '';
+    function sendMessage() {
+      const text = document.getElementById('message-input').value.trim();
+      if (!text || !activeFriend) return;
+
+      const timestamp = Date.now();
+      const message = { from: username, to: activeFriend, text, time: timestamp };
+      setMessageCookie(timestamp, message);
+      document.getElementById('message-input').value = '';
+      loadMessages();
     }
 
-    function notifyFriend(friend, type, content) {
-      const inbox = JSON.parse(localStorage.getItem('inbox') || '{}');
-      if (!inbox[friend]) inbox[friend] = [];
-      inbox[friend].push({ from: username, type, content, time: Date.now() });
-      localStorage.setItem('inbox', JSON.stringify(inbox));
+    function loadMessages() {
+      const now = Date.now();
+      const list = document.getElementById('message-list');
+      list.innerHTML = '';
+
+      const messages = getMessageCookies().map(cookie => {
+        const [name, value] = cookie.split('=');
+        try {
+          const msg = JSON.parse(atob(value));
+          if (now - msg.time > EXPIRY_MS) {
+            document.cookie = `${name}=; path=/; max-age=0`; // delete expired
+            return null;
+          }
+          return msg;
+        } catch {
+          return null;
+        }
+      }).filter(msg => msg && msg.to === username && msg.from === activeFriend);
+
+      messages.sort((a, b) => b.time - a.time).forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.innerHTML = `<strong>${msg.from}:</strong> ${msg.text}`;
+        list.appendChild(div);
+      });
+    }
+
+    function addFriend() {
+      const input = document.getElementById('new-friend');
+      const name = input.value.trim().toLowerCase();
+      if (!name) return;
+      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
+      if (!friends.includes(name)) {
+        friends.push(name);
+        localStorage.setItem('friends', JSON.stringify(friends));
+        loadFriends();
+      }
+      input.value = '';
+    }
+
+    function activateFriend(name) {
+      activeFriend = name;
+      document.getElementById('active-friend-tag').textContent = 'Chatting with: ' + name;
+      loadMessages();
     }
 
     function loadFriends() {
@@ -166,93 +123,11 @@
         div.className = 'friend';
         div.textContent = name;
         div.onclick = () => activateFriend(name);
-        div.oncontextmenu = (e) => {
-          e.preventDefault();
-          removeFriend(name);
-        };
         list.appendChild(div);
       });
     }
 
-    function addFriend() {
-      const input = document.getElementById('new-friend');
-      const name = input.value.trim();
-      if (!name) return;
-
-      const knownPlayers = JSON.parse(localStorage.getItem('knownPlayers') || '[]');
-      if (!knownPlayers.includes(name)) {
-        document.getElementById('active-friend-tag').textContent = 'Player non-existent';
-        input.value = '';
-        return;
-      }
-
-      pendingFriend = name;
-      document.getElementById('modal-text').textContent = `Accept friend request from ${name}?`;
-      document.getElementById('modal').style.display = 'block';
-
-      notifyFriend(name, 'friend-request', `${username} added you as a friend`);
-
-      if (Notification.permission === 'granted') {
-        new Notification(`Friend request sent to ${name}`);
-      }
-
-      input.value = '';
-    }
-
-    function acceptFriend() {
-      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      if (!friends.includes(pendingFriend)) {
-        friends.push(pendingFriend);
-        localStorage.setItem('friends', JSON.stringify(friends));
-        setCookie(`${pendingFriend}Messages`, '');
-        loadFriends();
-      }
-      document.getElementById('modal').style.display = 'none';
-      pendingFriend = null;
-    }
-
-    function removeFriend(name) {
-      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      const updated = friends.filter(f => f !== name);
-      localStorage.setItem('friends', JSON.stringify(updated));
-      setCookie(`${name}Messages`, '');
-      if (activeFriend === name) {
-        activeFriend = null;
-        document.getElementById('active-friend-tag').textContent = 'No friend selected';
-        document.getElementById('message-list').innerHTML = '';
-      }
-      loadFriends();
-    }
-
-    function activateFriend(name) {
-      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      if (!friends.includes(name)) {
-        activeFriend = null;
-        document.getElementById('active-friend-tag').textContent = 'Player non-existent';
-        document.getElementById('message-list').innerHTML = '';
-        return;
-      }
-      activeFriend = name;
-      document.getElementById('active-friend-tag').textContent = 'Chatting with: ' + name;
-      loadMessages();
-    }
-
-    function loadMessages() {
-      const raw = getCookie(`${activeFriend}Messages`);
-      const messages = raw ? raw.split(' |-| ') : [];
-      const list = document.getElementById('message-list');
-      list.innerHTML = '';
-      messages.reverse().forEach(text => {
-        const div = document.createElement('div');
-        div.className = 'message';
-        div.innerHTML = `<strong>${activeFriend}:</strong> ${text}`;
-        list.appendChild(div);
-      });
-    }
-
-    function sendMessage() {
-      const text = document.getElementById('message-input').value.trim();
-      if (!text || !activeFriend) return;
-      const key = `${activeFriend}Messages`;
-      const current = getCookie(key);
-      const updated = current ? `${current}
+    loadFriends();
+  </script>
+</body>
+</html>
