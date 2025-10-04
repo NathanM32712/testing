@@ -4,20 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login</title>
-  <script>
-    // Instant redirect if accountinfo is found
-    (function() {
-      const account = localStorage.getItem('accountinfo');
-      if (account) {
-        try {
-          JSON.parse(account); // validate format
-          window.location.href = 'index.html';
-        } catch (e) {
-          console.error('Invalid accountinfo format');
-        }
-      }
-    })();
-  </script>
   <style>
     body {
       margin: 0;
@@ -77,9 +63,9 @@
 
       if (found) {
         localStorage.setItem('accountinfo', JSON.stringify(found));
-        window.location.href = 'index.html';
+        location.replace('index.html');
       } else {
-        alert('Account not found. Please create one.');
+        alert('Account not found. Please check your credentials or create a new account.');
       }
     }
 
@@ -94,12 +80,18 @@
         return;
       }
 
-      const newAccount = { username, pass, displayname, balance };
       const accounts = JSON.parse(localStorage.getItem('accountsList') || '[]');
+      const exists = accounts.some(acc => acc.username === username);
+      if (exists) {
+        alert('Username already exists. Please choose another.');
+        return;
+      }
+
+      const newAccount = { username, pass, displayname, balance };
       accounts.push(newAccount);
       localStorage.setItem('accountsList', JSON.stringify(accounts));
       localStorage.setItem('accountinfo', JSON.stringify(newAccount));
-      window.location.href = 'index.html';
+      location.replace('index.html');
     }
   </script>
 </body>

@@ -10,7 +10,7 @@
       account = JSON.parse(raw);
     } catch {}
     if (!account || typeof account !== 'object' || !account.username || !account.displayname) {
-      window.location.href = 'login.html';
+      location.replace('login.html');
     }
   </script>
   <style>
@@ -72,7 +72,7 @@
 </head>
 <body>
   <h1>🎮 Riskless Launcher</h1>
-  <div id="user-tag">Loading account...</div>
+  <div id="user-tag"></div>
   <button class="button" onclick="location.href='messenger.html'">💬 Messenger</button>
   <button class="button" onclick="location.href='admin.html'">🛠 Admin Panel</button>
   <button class="button" onclick="location.href='update-logs.html'">📜 Updates</button>
@@ -81,11 +81,11 @@
 
   <script>
     const account = JSON.parse(localStorage.getItem('accountinfo'));
-    document.getElementById('user-tag').textContent = 'Logged in as: ' + account.username;
+    document.getElementById('user-tag').textContent = 'Logged in as: ' + account.displayname;
 
     function logout() {
       localStorage.removeItem('accountinfo');
-      window.location.href = 'login.html';
+      location.replace('login.html');
     }
 
     const gameData = {
