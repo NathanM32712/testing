@@ -137,8 +137,24 @@
     let activeFriend = null;
     let pendingFriend = null;
 
-    function generateId() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    if (!localStorage.getItem('knownPlayers')) {
+      localStorage.setItem('knownPlayers', JSON.stringify(['rex', 'bob', 'alice', 'fartmaster']));
+    }
+
+    function setCookie(name, value) {
+      document.cookie = `${name}=${value}; path=/`;
+    }
+
+    function getCookie(name) {
+      const match = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+      return match ? match.split('=')[1] : '';
+    }
+
+    function notifyFriend(friend, type, content) {
+      const inbox = JSON.parse(localStorage.getItem('inbox') || '{}');
+      if (!inbox[friend]) inbox[friend] = [];
+      inbox[friend].push({ from: username, type, content, time: Date.now() });
+      localStorage.setItem('inbox', JSON.stringify(inbox));
     }
 
     function loadFriends() {
@@ -162,12 +178,24 @@
       const input = document.getElementById('new-friend');
       const name = input.value.trim();
       if (!name) return;
+
+      const knownPlayers = JSON.parse(localStorage.getItem('knownPlayers') || '[]');
+      if (!knownPlayers.includes(name)) {
+        document.getElementById('active-friend-tag').textContent = 'Player non-existent';
+        input.value = '';
+        return;
+      }
+
       pendingFriend = name;
       document.getElementById('modal-text').textContent = `Accept friend request from ${name}?`;
       document.getElementById('modal').style.display = 'block';
+
+      notifyFriend(name, 'friend-request', `${username} added you as a friend`);
+
       if (Notification.permission === 'granted') {
         new Notification(`Friend request sent to ${name}`);
       }
+
       input.value = '';
     }
 
@@ -176,6 +204,7 @@
       if (!friends.includes(pendingFriend)) {
         friends.push(pendingFriend);
         localStorage.setItem('friends', JSON.stringify(friends));
+        setCookie(`${pendingFriend}Messages`, '');
         loadFriends();
       }
       document.getElementById('modal').style.display = 'none';
@@ -186,6 +215,7 @@
       const friends = JSON.parse(localStorage.getItem('friends') || '[]');
       const updated = friends.filter(f => f !== name);
       localStorage.setItem('friends', JSON.stringify(updated));
+      setCookie(`${name}Messages`, '');
       if (activeFriend === name) {
         activeFriend = null;
         document.getElementById('active-friend-tag').textContent = 'No friend selected';
@@ -196,21 +226,26 @@
 
     function activateFriend(name) {
       const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      if (!friends.includes(name)) return;
+      if (!friends.includes(name)) {
+        activeFriend = null;
+        document.getElementById('active-friend-tag').textContent = 'Player non-existent';
+        document.getElementById('message-list').innerHTML = '';
+        return;
+      }
       activeFriend = name;
       document.getElementById('active-friend-tag').textContent = 'Chatting with: ' + name;
       loadMessages();
     }
 
     function loadMessages() {
-      const allMessages = JSON.parse(localStorage.getItem('messages') || '{}');
-      const thread = allMessages[activeFriend] || [];
+      const raw = getCookie(`${activeFriend}Messages`);
+      const messages = raw ? raw.split(' |-| ') : [];
       const list = document.getElementById('message-list');
       list.innerHTML = '';
-      [...thread].reverse().forEach(msg => {
+      messages.reverse().forEach(text => {
         const div = document.createElement('div');
         div.className = 'message';
-        div.innerHTML = `<strong>${msg.from}:</strong> ${msg.text}`;
+        div.innerHTML = `<strong>${activeFriend}:</strong> ${text}`;
         list.appendChild(div);
       });
     }
@@ -218,39 +253,6 @@
     function sendMessage() {
       const text = document.getElementById('message-input').value.trim();
       if (!text || !activeFriend) return;
-      const friends = JSON.parse(localStorage.getItem('friends') || '[]');
-      if (!friends.includes(activeFriend)) return;
-
-      const allMessages = JSON.parse(localStorage.getItem('messages') || '{}');
-      if (!allMessages[activeFriend]) allMessages[activeFriend] = [];
-
-      const newMessage = {
-        id: generateId(),
-        from: username,
-        to: activeFriend,
-        text,
-        timestamp: Date.now()
-      };
-
-      allMessages[activeFriend].push(newMessage);
-      localStorage.setItem('messages', JSON.stringify(allMessages));
-      document.getElementById('message-input').value = '';
-
-      const div = document.createElement('div');
-      div.className = 'message';
-      div.innerHTML = `<strong>${newMessage.from}:</strong> ${newMessage.text}`;
-      document.getElementById('message-list').insertBefore(div, document.getElementById('message-list').firstChild);
-
-      if (document.visibilityState !== 'visible' && Notification.permission === 'granted') {
-        new Notification(`Message to ${activeFriend}`, { body: text });
-      }
-    }
-
-    if (Notification.permission !== 'granted') {
-      Notification.requestPermission();
-    }
-
-    loadFriends();
-  </script>
-</body>
-</html>
+      const key = `${activeFriend}Messages`;
+      const current = getCookie(key);
+      const updated = current ? `${current}
