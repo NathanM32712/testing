@@ -66,6 +66,8 @@
       flex: 1;
       overflow-y: auto;
       box-shadow: 0 0 10px #007BFF;
+      display: flex;
+      flex-direction: column-reverse;
     }
     .message {
       margin-bottom: 12px;
@@ -175,7 +177,6 @@
         div.innerHTML = `<strong>${msg.from}:</strong> ${msg.text}`;
         messageList.appendChild(div);
       });
-      messageList.scrollTop = messageList.scrollHeight;
     }
 
     function sendMessage() {
@@ -189,11 +190,15 @@
       allMessages[activeFriend].push(newMessage);
       localStorage.setItem('messages', JSON.stringify(allMessages));
       input.value = '';
-      loadMessages();
 
-      // Notify if friend is not active (simulated)
-      const currentTab = document.visibilityState !== 'visible';
-      if (currentTab && Notification.permission === 'granted') {
+      // Show message instantly at top
+      const div = document.createElement('div');
+      div.className = 'message';
+      div.innerHTML = `<strong>${newMessage.from}:</strong> ${newMessage.text}`;
+      messageList.insertBefore(div, messageList.firstChild);
+
+      // Notify if tab not active
+      if (document.visibilityState !== 'visible' && Notification.permission === 'granted') {
         new Notification(`Message to ${activeFriend}`, { body: text });
       }
     }
