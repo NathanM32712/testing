@@ -2,10 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Riskless Casino</title>
+  <title>Riskless Homepage</title>
+  <script>
+    const raw = localStorage.getItem('accountinfo');
+    let account = null;
+    try {
+      account = JSON.parse(raw);
+    } catch {}
+    if (!account || typeof account !== 'object' || !account.username || !account.displayname) {
+      window.location.href = 'login.html';
+    }
+  </script>
   <style>
     body {
-      background: #111;
+      background: #000;
       color: #0cf;
       font-family: sans-serif;
       margin: 0;
@@ -15,26 +25,23 @@
       font-size: 48px;
       margin-bottom: 10px;
     }
-    #displayname-tag, #balance-tag {
-      font-size: 14px;
+    #user-tag {
+      font-size: 16px;
       color: #888;
-      margin-bottom: 10px;
-    }
-    #balance-tag {
       margin-bottom: 30px;
     }
-    .launcher-button {
+    .button {
       background: #222;
       color: #0cf;
       border: none;
       border-radius: 6px;
-      padding: 8px 16px;
+      padding: 10px 20px;
       font-size: 14px;
       cursor: pointer;
+      margin-bottom: 10px;
       margin-right: 10px;
-      margin-bottom: 30px;
     }
-    .launcher-button:hover {
+    .button:hover {
       background: #444;
     }
     .category {
@@ -64,86 +71,44 @@
   </style>
 </head>
 <body>
-  <h1>🎰 Welcome to Riskless Casino</h1>
-  <div id="displayname-tag">Loading account...</div>
-  <div id="balance-tag">
-    Balance: $<span id="balance">0</span><br>
-    Applied slotsbalance: $<span id="slots-cookie">0</span>
-  </div>
-  <button class="launcher-button" onclick="location.href='admin.html'">🛠 Admin Panel</button>
-  <button class="launcher-button" onclick="location.href='update-logs.html'">📜 Updates</button>
-  <button class="launcher-button" onclick="window.open('https://discord.gg/YUj7XYcZad', '_blank')">💬 support my friend</button>
-  <button class="launcher-button" onclick="window.open('https://discord.gg/CRvWYgbfF8', '_blank')">💬 support me</button>
-  <button class="launcher-button" onclick="location.href='messenger.html'">💬 Messenger</button>
-  <button class="launcher-button" onclick="logout()">🚪 Logout</button>
+  <h1>🎮 Riskless Launcher</h1>
+  <div id="user-tag">Loading account...</div>
+  <button class="button" onclick="location.href='messenger.html'">💬 Messenger</button>
+  <button class="button" onclick="location.href='admin.html'">🛠 Admin Panel</button>
+  <button class="button" onclick="location.href='update-logs.html'">📜 Updates</button>
+  <button class="button" onclick="logout()">🚪 Logout</button>
   <div id="games-container"></div>
 
   <script>
-    const BALANCE_KEY = 'slotsBalance';
-    const account = JSON.parse(localStorage.getItem('accountinfo') || 'null');
-    if (!account || !account.displayname) {
-      window.location.href = 'index.html'; // Redirect to login
-    }
-
-    const displayname = account.displayname;
-    document.getElementById('displayname-tag').textContent = 'Logged in as: ' + displayname;
-
-    let slotsBalance = localStorage.getItem(BALANCE_KEY);
-    if (slotsBalance === null) {
-      localStorage.setItem(BALANCE_KEY, '10000');
-      slotsBalance = 10000;
-    } else {
-      slotsBalance = parseInt(slotsBalance) || 0;
-    }
-
-    let slotsCookie = 0;
-    const cookieName = `slotsbalance-${account.username || 'guest'}`;
-
-    document.cookie.split('; ').forEach(cookie => {
-      const [name, rawValue] = cookie.split('=');
-      if (name === cookieName) {
-        const change = parseInt(decodeURIComponent(rawValue), 10);
-        if (!isNaN(change)) {
-          slotsCookie = change;
-          slotsBalance += change;
-          if (slotsBalance < 0) slotsBalance = 0;
-          localStorage.setItem(BALANCE_KEY, slotsBalance);
-        }
-        document.cookie = `${cookieName}=; path=/; max-age=0`;
-      }
-    });
-
-    document.getElementById('balance').textContent = slotsBalance;
-    document.getElementById('slots-cookie').textContent = slotsCookie;
+    const account = JSON.parse(localStorage.getItem('accountinfo'));
+    document.getElementById('user-tag').textContent = 'Logged in as: ' + account.displayname;
 
     function logout() {
       localStorage.removeItem('accountinfo');
-      window.location.href = 'index.html';
+      window.location.href = 'login.html';
     }
 
     const gameData = {
-      "vegas-reels":    { enabled: true,  category: "Slots",       label: "Vegas Reels",       url: "vegas-reels.html" },
-      "texas-holdem":   { enabled: true,  category: "Poker",       label: "Texas Hold'em",     url: "texas-holdem.html" },
-      "roulette":       { enabled: true,  category: "Table Games", label: "Roulette",          url: "roulette.html" },
-      "plinko-extreme": { enabled: true,  category: "Plinko",      label: "Plinko Extreme",    url: "plinko-extreme.html" },
-      "plinko-classic": { enabled: true,  category: "Plinko",      label: "Plinko Classic",    url: "plinko-classic.html" },
-      "omaha":          { enabled: true,  category: "Poker",       label: "Omaha",             url: "omaha.html" },
-      "mines-5x5":      { enabled: true,  category: "Mines",       label: "Mines 5x5",         url: "mines-5x5.html" },
-      "mines-3x3":      { enabled: true,  category: "Mines",       label: "Mines 3x3",         url: "mines-3x3.html" },
-      "limbo-classic":  { enabled: true,  category: "Limbo",       label: "Limbo Classic",     url: "limbo-classic.html" },
-      "fruit-frenzy":   { enabled: true,  category: "Slots",       label: "Fruit Frenzy",      url: "fruit-frenzy.html" },
-      "five-card-draw": { enabled: true,  category: "Poker",       label: "Five Card Draw",    url: "five-card-draw.html" },
-      "dice-duel":      { enabled: true,  category: "Arcade",      label: "Dice Duel",         url: "dice-duel.html" },
-      "coin-flip":      { enabled: true,  category: "Arcade",      label: "Coin Flip",         url: "coin-flip.html" },
-      "classic-slots":  { enabled: true,  category: "Slots",       label: "Classic Slots",     url: "classic-slots.html" },
-      "blackjack":      { enabled: true,  category: "Table Games", label: "Blackjack",         url: "blackjack.html" },
-      "baccarat":       { enabled: true,  category: "Table Games", label: "Baccarat",          url: "baccarat.html" }
+      "vegas-reels":    { enabled: true, category: "Slots", label: "Vegas Reels", url: "vegas-reels.html" },
+      "texas-holdem":   { enabled: true, category: "Poker", label: "Texas Hold'em", url: "texas-holdem.html" },
+      "roulette":       { enabled: true, category: "Table Games", label: "Roulette", url: "roulette.html" },
+      "plinko-extreme": { enabled: true, category: "Plinko", label: "Plinko Extreme", url: "plinko-extreme.html" },
+      "plinko-classic": { enabled: true, category: "Plinko", label: "Plinko Classic", url: "plinko-classic.html" },
+      "omaha":          { enabled: true, category: "Poker", label: "Omaha", url: "omaha.html" },
+      "mines-5x5":      { enabled: true, category: "Mines", label: "Mines 5x5", url: "mines-5x5.html" },
+      "mines-3x3":      { enabled: true, category: "Mines", label: "Mines 3x3", url: "mines-3x3.html" },
+      "limbo-classic":  { enabled: true, category: "Limbo", label: "Limbo Classic", url: "limbo-classic.html" },
+      "fruit-frenzy":   { enabled: true, category: "Slots", label: "Fruit Frenzy", url: "fruit-frenzy.html" },
+      "five-card-draw": { enabled: true, category: "Poker", label: "Five Card Draw", url: "five-card-draw.html" },
+      "dice-duel":      { enabled: true, category: "Arcade", label: "Dice Duel", url: "dice-duel.html" },
+      "coin-flip":      { enabled: true, category: "Arcade", label: "Coin Flip", url: "coin-flip.html" },
+      "classic-slots":  { enabled: true, category: "Slots", label: "Classic Slots", url: "classic-slots.html" },
+      "blackjack":      { enabled: true, category: "Table Games", label: "Blackjack", url: "blackjack.html" },
+      "baccarat":       { enabled: true, category: "Table Games", label: "Baccarat", url: "baccarat.html" }
     };
 
     const container = document.getElementById('games-container');
-    const enabled = Object.entries(gameData)
-      .filter(([_, g]) => g.enabled)
-      .map(([key, g]) => ({ key, ...g }));
+    const enabled = Object.entries(gameData).filter(([_, g]) => g.enabled).map(([key, g]) => ({ key, ...g }));
     const byCategory = enabled.reduce((acc, game) => {
       if (!acc[game.category]) acc[game.category] = [];
       acc[game.category].push(game);
@@ -161,7 +126,7 @@
       list.className = 'game-list';
       byCategory[category].forEach(game => {
         const li = document.createElement('li');
-        const a  = document.createElement('a');
+        const a = document.createElement('a');
         a.href = game.url;
         a.textContent = game.label;
         li.appendChild(a);
